@@ -107,6 +107,7 @@ set(start_position 0)
 list(GET states 0 current_state)
 
 # Execute the program
+set(steps 0)
 while(NOT current_state MATCHES "^(ACCEPT|REJECT)$")
   # Get the value under the tape head and get the state info for that symbol
   string(SUBSTRING "${tape_contents}" ${tape_position} 1 tape_cell)
@@ -137,13 +138,14 @@ while(NOT current_state MATCHES "^(ACCEPT|REJECT)$")
 
   # Set the next state
   set(current_state ${next_state})
+  math(EXPR steps "${steps} + 1")
 endwhile()
 
 # Print the result
 if(current_state STREQUAL "ACCEPT")
-  message(STATUS "Input was accepted by the machine")
+  message(STATUS "Input was accepted by the machine after ${steps} steps")
 else()
-  message(STATUS "Input was rejected by the machine")
+  message(STATUS "Input was rejected by the machine after ${steps} steps")
 endif()
 
 # Print the tape contents
