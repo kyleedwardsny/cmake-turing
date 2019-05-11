@@ -10,12 +10,14 @@ endif()
 file(STRINGS "${TURING_DESCRIPTOR_FILE}" turing_descriptor_contents)
 set(linenum 1)
 foreach(line IN LISTS turing_descriptor_contents)
+  # Separate the line into groups of fields
   if(NOT line MATCHES "^([a-zA-Z0-9_-]+) ([B01] (LEFT|RIGHT) [a-zA-Z0-9_-]+) ([B01] (LEFT|RIGHT) [a-zA-Z0-9_-]+) ([B01] (LEFT|RIGHT) [a-zA-Z0-9_-]+)$")
     message(FATAL_ERROR "Syntax error in ${TURING_DESCRIPTOR_FILE} line ${linenum}: \"${line}\"")
   endif()
 
   set(state_name "${CMAKE_MATCH_1}")
 
+  # Break each group into its individual fields
   # This has to be broken up because of limits on parentheses pairs in regular expressions
   set(descriptor_B "${CMAKE_MATCH_2}")
   set(descriptor_0 "${CMAKE_MATCH_4}")
@@ -106,31 +108,34 @@ list(GET states 0 current_state)
 
 # Execute the program
 while(NOT current_state MATCHES "^(ACCEPT|REJECT)$")
+  # Get the value under the tape head and get the state info for that symbol
   string(SUBSTRING "${tape_contents}" ${tape_position} 1 tape_cell)
   set(write_value "${state_${current_state}_write_value_${tape_cell}}")
   set(next_direction "${state_${current_state}_next_direction_${tape_cell}}")
   set(next_state "${state_${current_state}_next_state_${tape_cell}}")
 
+  # Replace the value under the tape head with the desired value
   math(EXPR second_half_start "${tape_position} + 1")
   string(SUBSTRING "${tape_contents}" 0 ${tape_position} first_half)
   string(SUBSTRING "${tape_contents}" ${second_half_start} -1 second_half)
   set(tape_contents "${first_half}${write_value}${second_half}")
 
-  if(next_direction STREQUAL "LEFT")
-    if(tape_position EQUAL 0)
+  if(next_direction STREQUAL "LEFT") # Move tape head left
+    if(tape_position EQUAL 0) # Prepend a blank symbol
       math(EXPR start_position "${start_position} + 1")
       set(tape_contents "B${tape_contents}")
-    else()
+    else() # Simply move left
       math(EXPR tape_position "${tape_position} - 1")
     endif()
-  else()
+  else() # Move tape head right - this will always be RIGHT because of parse-time check
     math(EXPR tape_position "${tape_position} + 1")
     string(LENGTH "${tape_contents}" tape_len)
-    if(tape_position EQUAL tape_len)
+    if(tape_position EQUAL tape_len) # Append a blank symbol
       set(tape_contents "${tape_contents}B")
     endif()
   endif()
 
+  # Set the next state
   set(current_state ${next_state})
 endwhile()
 
@@ -146,14 +151,19 @@ string(LENGTH "${tape_contents}" tape_len)
 math(EXPR last "${tape_len} - 1")
 set(print_contents)
 foreach(i RANGE ${last})
+  # Print left bracket for start and end position
   if(i EQUAL start_position)
     string(APPEND print_contents "[")
   endif()
   if(i EQUAL tape_position)
     string(APPEND print_contents "(")
   endif()
+
+  # Print the symbol itself
   string(SUBSTRING "${tape_contents}" ${i} 1 tape_cell)
   string(APPEND print_contents "${tape_cell}")
+
+  # Print right bracket for start and end position
   if(i EQUAL tape_position)
     string(APPEND print_contents ")")
   endif()
@@ -162,4 +172,6 @@ foreach(i RANGE ${last})
   endif()
 endforeach()
 message(STATUS "Tape contents: ${print_contents}")
+
+# Print a visual guide
 message(STATUS "[start position], (end position)")
